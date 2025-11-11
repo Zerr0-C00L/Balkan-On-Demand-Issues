@@ -1,0 +1,147 @@
+name: AI Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  analyze-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: AI Issue Analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueBody = issue.body || '';
+            const issueTitle = issue.title || '';
+            const labels = issue.labels.map(l => l.name);
+            
+            // Determine issue type and priority
+            let issueType = 'question';
+            let priority = 'medium';
+            let analysis = '';
+            
+            if (labels.includes('bug') || issueTitle.toLowerCase().includes('[bug]')) {
+              issueType = 'bug';
+              
+              // Analyze bug severity
+              if (issueBody.toLowerCase().includes('crash') || 
+                  issueBody.toLowerCase().includes('not working') ||
+                  issueBody.toLowerCase().includes('error')) {
+                priority = 'high';
+              }
+              
+              analysis = `🐛 **Bug Report Detected**
+              
+**Priority:** ${priority.toUpperCase()}
+**Type:** ${issueType}
+
+**AI Analysis:**
+- This appears to be a bug report
+- Priority level: ${priority}
+- Recommended action: Investigate and reproduce the issue
+              
+**Next Steps for Maintainer:**
+1. Review the reproduction steps
+2. Check if this affects multiple users
+3. Test in local environment
+4. Fix in private repository
+5. Deploy and verify
+6. Close this issue with resolution details
+
+---
+*This analysis was generated automatically. @Zerr0-C00L please review.*`;
+              
+            } else if (labels.includes('enhancement') || issueTitle.toLowerCase().includes('[feature]')) {
+              issueType = 'feature';
+              priority = 'medium';
+              
+              analysis = `💡 **Feature Request Detected**
+              
+**Priority:** ${priority.toUpperCase()}
+**Type:** ${issueType}
+
+**AI Analysis:**
+- This is a feature request
+- Community feedback: Consider gathering more input
+- Implementation complexity: Needs assessment
+              
+**Next Steps for Maintainer:**
+1. Evaluate feasibility and impact
+2. Determine if this aligns with roadmap
+3. Estimate implementation effort
+4. Add to backlog or start development
+5. Update issue with timeline
+
+---
+*This analysis was generated automatically. @Zerr0-C00L please review.*`;
+              
+            } else {
+              issueType = 'question';
+              priority = 'low';
+              
+              analysis = `❓ **Question/Support Request Detected**
+              
+**Priority:** ${priority.toUpperCase()}
+**Type:** ${issueType}
+
+**AI Analysis:**
+- This appears to be a support question
+- May be resolved with documentation
+- Could benefit from FAQ entry
+              
+**Next Steps for Maintainer:**
+1. Provide answer or guidance
+2. Link to relevant documentation
+3. Consider adding to FAQ if common question
+4. Close once resolved
+
+---
+*This analysis was generated automatically. @Zerr0-C00L please review.*`;
+            }
+            
+            // Post AI analysis as comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: analysis
+            });
+            
+            // Add appropriate labels if not already present
+            const labelsToAdd = [];
+            if (priority === 'high' && !labels.includes('needs-triage')) {
+              labelsToAdd.push('needs-triage');
+            }
+            
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labelsToAdd
+              });
+            }
+      
+      - name: Notify Maintainer
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            // Log for maintainer
+            console.log('📬 New Issue Created:');
+            console.log(`Title: ${issue.title}`);
+            console.log(`Number: #${issue.number}`);
+            console.log(`URL: ${issue.html_url}`);
+            console.log(`Reporter: @${issue.user.login}`);
+            console.log('\n🤖 AI analysis has been posted as a comment.');
+            console.log('\n✅ Review the AI analysis and take action as needed.');
