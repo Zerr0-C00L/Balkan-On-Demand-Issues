@@ -80,10 +80,6 @@ When participating in discussions:
 - ❌ No spam or promotional content
 - ❌ No offensive language
 
-## 📧 Contact
-
-For private inquiries: **support@balkan-on-demand.com**
-
 ## 🔒 Privacy & Source Code
 
 The source code repository is private to:
